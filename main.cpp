@@ -13,6 +13,10 @@
  *  all good
  */
 
+void printPhysicalDeviceFeatures(VkPhysicalDevice& dev) {
+
+}
+
 int main (int argc, char *argv[]) {
     /* 
      * Get version 
@@ -24,7 +28,7 @@ int main (int argc, char *argv[]) {
     /* 
      * Create Vulkan instance
      */
-    VkInstance vInstance = {0}; 
+    VkInstance vInstance = { }; 
     VkResult result = VK_SUCCESS;
 
     VkInstanceCreateInfo vInfo = {
@@ -75,23 +79,114 @@ int main (int argc, char *argv[]) {
         DBG_ERR("Cannot query physical devices")
         return result;
     }
-    
+
     for (const auto& dev: devs) { 
-        VkPhysicalDeviceProperties devProps = {0};
+        VkPhysicalDeviceProperties devProps = { };
         vkGetPhysicalDeviceProperties(dev, &devProps);
         std::cout << "Device Type: " << devProps.deviceType << std::endl;
         std::cout << "Device name: " << devProps.deviceName << std::endl;
-        /* Querying family queues */
+
+        /*
+         * Querying for Device Features
+         */
+        VkPhysicalDeviceFeatures devFeatures = { };
+        vkGetPhysicalDeviceFeatures(dev, &devFeatures);
+
+        /*
+         * Querying for Device Memory types
+         */
+        VkPhysicalDeviceMemoryProperties memProps = { };
+        vkGetPhysicalDeviceMemoryProperties(dev, &memProps);
+
+        /* 
+         * Querying queue Properties
+         */
         uint32_t count = 0;
         std::vector<VkQueueFamilyProperties> queueProperties;
         vkGetPhysicalDeviceQueueFamilyProperties(dev, &count, nullptr);
         queueProperties.resize(count);
         std::cout << "Number of queues available in device \"" 
             << devProps.deviceName << "\": " << count << std::endl;
+
         vkGetPhysicalDeviceQueueFamilyProperties(dev, &count, queueProperties.data());
         for (const auto& queueProp: queueProperties) {
-            std::cout << "Queue family: " << queueProp.queueFlags << std::endl;
+            std::cout << "Queue family type: " 
+                << queueProp.queueFlags << "(" << queueProp.queueCount << ")" << std::endl;
         }
+    }
+
+    /*
+     * Querying Physical Device groups
+     */
+    uint32_t devGroupCount = 0;
+    std::vector<VkPhysicalDeviceGroupProperties> devGroupProperties;
+    vkEnumeratePhysicalDeviceGroups(vInstance, &devGroupCount, nullptr);
+    devGroupProperties.resize(devGroupCount);
+    std::cout << "There are: " << devGroupCount << " Physical Device Groups" << std::endl;
+    vkEnumeratePhysicalDeviceGroups(vInstance, &devGroupCount, devGroupProperties.data());
+
+    for (const auto& devGroup: devGroupProperties) { 
+        std::cout << "Group Type: " << devGroup.sType << std::endl;
+        std::cout << "Group Devices: " << devGroup.physicalDeviceCount << std::endl;
+    }
+
+    /*
+     * Creating Logical Device
+     */
+    VkDeviceQueueCreateInfo devQueue = { 
+        .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+        .queueFamilyIndex = 0,
+        .pQueuePriorities = nullptr,
+    };
+
+    VkDeviceCreateInfo devInfo = {
+        .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+        .pNext = nullptr,
+        .pQueueCreateInfos = &devQueue,
+        .enabledLayerCount = 0,
+        .ppEnabledLayerNames = nullptr,
+        .enabledExtensionCount = 0,
+        .ppEnabledExtensionNames = nullptr,
+        .pEnabledFeatures = nullptr, /* Put here the Physical dev features from vkGetPhysicalDevFeat */
+    };
+
+    VkPhysicalDeviceFeatures devFeatures = { };
+    vkGetPhysicalDeviceFeatures(devs.front(), &devFeatures);
+    devInfo.pEnabledFeatures = &devFeatures;
+    
+    VkDevice dev = { };
+    if (VK_SUCCESS != vkCreateDevice(devs.front(), &devInfo, nullptr, &dev)) {
+        DBG_ERR("Bad call to vkCreateDevice");
+    }
+
+    /* 
+     * Enumerate Instance Layers
+     */
+    uint32_t instPropCount = 0;
+    std::vector<VkLayerProperties> instanceLayerProperties;
+    vkEnumerateInstanceLayerProperties(&instPropCount, nullptr);
+    instanceLayerProperties.resize(instPropCount);
+    vkEnumerateInstanceLayerProperties(&instPropCount, instanceLayerProperties.data());
+    std::cout << "-- Querying for instance layer properties: " << std::endl;
+    std::cout << "Available layer properties: " << instPropCount << std::endl;
+    for (const auto& instanceLayerProperty: instanceLayerProperties) {
+        std::cout << instanceLayerProperty.layerName << std::endl;
+        std::cout << "\t" << instanceLayerProperty.description << std::endl;
+    }
+
+    /* 
+     * Enumerate Device Layers
+     */
+    uint32_t devPropCount = 0;
+    std::vector<VkLayerProperties> deviceLayerProperties;
+    vkEnumerateDeviceLayerProperties(devs.back(), &devPropCount, nullptr);
+    instanceLayerProperties.resize(devPropCount);
+    vkEnumerateDeviceLayerProperties(devs.back(), &devPropCount, deviceLayerProperties.data());
+    std::cout << "-- Querying for Device layer properties: " << std::endl;
+    std::cout << "Available layer properties: " << devPropCount << std::endl;
+    for (const auto& deviceLayerProp: deviceLayerProperties) {
+        std::cout << deviceLayerProp.layerName << std::endl;
+        std::cout << "\t" << deviceLayerProp.description << std::endl;
     }
 
     DBG_CHECKPOINT;
