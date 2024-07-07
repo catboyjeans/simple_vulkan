@@ -1,9 +1,11 @@
-project(vulkan_test)
 cmake_minimum_required(VERSION 3.7)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
-set(CMAKE_FIND_DEBUG_MODE TRUE)
 set(CMAKE_EXPORT_COMPILE_COMMANDS Y)
+set(CMAKE_FIND_DEBUG_MODE TRUE)
+
+project(vulkan_test)
 
 set(TEST_SOURCES
     main.cpp
