@@ -1,21 +1,10 @@
-#include <iostream>
-#include <vector>
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_core.h>
+#include <iostream>
+#include <vector>
 
 #define DBG_CHECKPOINT std::cout << "👍👍DEBUG: All good until here..." << std::endl
 #define DBG_ERR(msg) std::cout << "❌❌" msg << std::endl;
-
-/* 
- * for bitmask in bitmasks 
- *  test bitmask in value
- *  add check for bitmask
- *  all good
- */
-
-void printPhysicalDeviceFeatures(VkPhysicalDevice& dev) {
-
-}
 
 int main (int argc, char *argv[]) {
     /* 
@@ -24,6 +13,20 @@ int main (int argc, char *argv[]) {
     uint32_t version = 0;
     vkEnumerateInstanceVersion(&version);
     std::cout << "Vulkan Instance version: " << version << std::endl;
+
+    /*
+     * Query for supported Instance extensions
+     */
+    uint32_t propertyCount = 0;
+    std::vector<VkExtensionProperties> instanceProps;
+    vkEnumerateInstanceExtensionProperties(nullptr, &propertyCount, nullptr);
+    instanceProps.resize(propertyCount);
+    vkEnumerateInstanceExtensionProperties(nullptr, &propertyCount, instanceProps.data());
+
+    std::cout << "Enumerating supported Instance Extensions..." << std::endl;
+    for (const auto& prop: instanceProps) { 
+        std::cout << "\t- " << prop.extensionName << std::endl;
+    }
 
     /* 
      * Create Vulkan instance
@@ -91,6 +94,20 @@ int main (int argc, char *argv[]) {
          */
         VkPhysicalDeviceFeatures devFeatures = { };
         vkGetPhysicalDeviceFeatures(dev, &devFeatures);
+
+        /*
+         * Querying for available Device Extensions
+         */
+        std::vector<VkExtensionProperties> devExtProps;
+        uint32_t devPropCount = 0;
+        vkEnumerateDeviceExtensionProperties(dev, nullptr, &devPropCount, nullptr);
+        devExtProps.resize(devPropCount);
+        vkEnumerateDeviceExtensionProperties(dev, nullptr, &devPropCount, devExtProps.data());
+
+        for (const auto& prop: devExtProps) { 
+            std::cout << "\t- " << prop.extensionName << std::endl;
+        }
+        
 
         /*
          * Querying for Device Memory types
@@ -190,6 +207,12 @@ int main (int argc, char *argv[]) {
     }
 
     DBG_CHECKPOINT;
+
+    /*
+     * Destroy Vulkan Instance
+     */
+    std::cout << "Destroying vulkan Instance" << std::endl;
+    vkDestroyInstance(vInstance, nullptr);
 
     return 0;
 }
